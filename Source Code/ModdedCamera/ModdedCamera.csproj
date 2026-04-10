@@ -33,10 +33,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="LemonUI.SHVDN3">
-      <HintPath>LemonUI.SHVDN3.dll</HintPath>
+      <HintPath>lib\LemonUI.SHVDN3.dll</HintPath>
     </Reference>
     <Reference Include="ScriptHookVDotNet">
-      <HintPath>ScriptHookVDotNet.dll</HintPath>
+      <HintPath>lib\ScriptHookVDotNet.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(USERPROFILE)\.nuget\packages\newtonsoft.json\13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
