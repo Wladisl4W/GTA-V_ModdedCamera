@@ -13,13 +13,13 @@ ScriptCamTool
 Установка:
   1. Установите Script Hook V и Script Hook V .NET в корень GTA V
   2. Скачайте LemonUI и скопируйте LemonUI.SHVDN3.dll в GTA V\scripts\
-  3. Скопируйте ModdedCamera.dll в GTA V\scripts\
-  4. Скопируйте папку paths в GTA V\scripts\ (рядом с DLL)
+  3. Скопируйте ModdedCamera.dll и Newtonsoft.Json.dll в GTA V\scripts\
+  4. Папка paths создаётся автоматически при первом сохранении пути
 
 В GTA V\scripts\ должно быть:
   • ModdedCamera.dll
+  • Newtonsoft.Json.dll
   • LemonUI.SHVDN3.dll
-  • paths\
 
 ==========================
   ИСПОЛЬЗОВАНИЕ
