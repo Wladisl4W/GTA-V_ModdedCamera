@@ -1,0 +1,512 @@
+using System;
+using System.Collections.Generic;
+using GTA;
+using GTA.Math;
+using GTA.Native;
+
+namespace ModdedCamera
+{
+	// Token: 0x02000007 RID: 7
+	public class SplineCamera
+	{
+		// Token: 0x17000004 RID: 4
+		// (get) Token: 0x06000047 RID: 71 RVA: 0x00002BE8 File Offset: 0x00000DE8
+		public Camera MainCamera
+		{
+			get
+			{
+				return this._mainCamera;
+			}
+		}
+
+		// Token: 0x17000005 RID: 5
+		// (get) Token: 0x06000048 RID: 72 RVA: 0x00002C00 File Offset: 0x00000E00
+		// (set) Token: 0x06000049 RID: 73 RVA: 0x00002C08 File Offset: 0x00000E08
+		public bool InterpToPlayer { get; set; }
+
+		// Token: 0x17000006 RID: 6
+		// (get) Token: 0x0600004A RID: 74 RVA: 0x00002C14 File Offset: 0x00000E14
+		// (set) Token: 0x0600004B RID: 75 RVA: 0x00002C2C File Offset: 0x00000E2C
+		public bool UsePlayerView
+		{
+			get
+			{
+				return this._usePlayerView;
+			}
+			set
+			{
+				if (value)
+				{
+					this._startPos = Game.Player.Character.Position;
+					this._hasStartPosition = true;
+					Game.Player.Character.IsInvincible = true;
+					Game.Player.Character.IsVisible = false;
+				}
+				else
+				{
+					// Teleport back only if start position is valid
+					if (this._hasStartPosition)
+					{
+						Game.Player.Character.Position = this._startPos;
+					}
+					Game.Player.Character.IsInvincible = false;
+					Game.Player.Character.IsVisible = true;
+					this._hasStartPosition = false;
+				}
+				this._usePlayerView = value;
+			}
+		}
+
+		// Token: 0x17000007 RID: 7
+		// (set) Token: 0x0600004C RID: 76 RVA: 0x00002CC7 File Offset: 0x00000EC7
+		public int Speed
+		{
+			set
+			{
+				int speed = Math.Max(1, value); // Prevent division by zero
+				Function.Call((Hash)1405496505074404570L, new InputArgument[]
+				{
+					this._mainCamera.Handle,
+					100 / speed * 1000
+				});
+			}
+		}
+
+		// Token: 0x17000008 RID: 8
+		// (get) Token: 0x0600004D RID: 77 RVA: 0x00002D04 File Offset: 0x00000F04
+		public List<Tuple<Vector3, Vector3>> Nodes
+		{
+			get
+			{
+				return this._nodes;
+			}
+		}
+
+		// Get positions list for serialization
+		public List<Vector3> GetPositions()
+		{
+			var positions = new List<Vector3>();
+			foreach (var node in this._nodes)
+			{
+				positions.Add(node.Item1);
+			}
+			return positions;
+		}
+
+		// Get rotations list for serialization
+		public List<Vector3> GetRotations()
+		{
+			var rotations = new List<Vector3>();
+			foreach (var node in this._nodes)
+			{
+				rotations.Add(node.Item2);
+			}
+			return rotations;
+		}
+
+		// Get durations list for serialization
+		public List<int> GetDurations()
+		{
+			return new List<int>(this._durations); // Return copy
+		}
+
+		// Token: 0x17000009 RID: 9
+		// Interpolation mode: 2 = Smooth (default), 0 = Linear
+		public int InterpolationMode
+		{
+			get { return this._interpolationMode; }
+			set
+			{
+				this._interpolationMode = value;
+				// Apply to the camera immediately
+				Function.Call((Hash)0xD1B0F412F109EA5D, new InputArgument[] { this._mainCamera.Handle, value }); // SET_CAM_SPLINE_SMOOTHING_STYLE
+			}
+		}
+		private int _interpolationMode = 2;
+
+		// Token: 0x0600004E RID: 78 RVA: 0x00002D1C File Offset: 0x00000F1C
+		public SplineCamera()
+		{
+			this._mainCamera = new Camera(Function.Call<int>(unchecked((Hash)(-4352696267611446977L)), new InputArgument[]
+			{
+				"DEFAULT_SPLINE_CAMERA",
+				0
+			}));
+			this._nodes = new List<Tuple<Vector3, Vector3>>();
+			this._replayTimer = new Timer(1100);
+			this._renderSceneTimer = new Timer(5000);
+			this._renderSceneTimer.Start();
+			// Set default smoothing style
+			Function.Call((Hash)0xD1B0F412F109EA5D, new InputArgument[] { this._mainCamera.Handle, this._interpolationMode });
+		}
+
+		// Properly dispose of the camera to prevent resource leaks
+		public void Dispose()
+		{
+			try
+			{
+				if (this._mainCamera != null && this._mainCamera.Exists())
+				{
+					if (this._mainCamera.IsActive)
+					{
+						this._mainCamera.IsActive = false;
+					}
+					// SHVDN3 uses DESTROY_CAM native instead of Camera.Delete()
+					Function.Call(Hash.DESTROY_CAM, new InputArgument[] { this._mainCamera.Handle });
+					this._mainCamera = null;
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.Error(ex, "Error disposing SplineCamera");
+			}
+		}
+
+		// Token: 0x0600004F RID: 79 RVA: 0x00002DA0 File Offset: 0x00000FA0
+		public void AddNode(Vector3 position, Vector3 rotation, int duration)
+		{
+			this._nodes.Add(new Tuple<Vector3, Vector3>(position, rotation));
+			this._durations.Add(duration);
+			this._defaultDuration = duration;
+			
+			// p7 = easeIn, p8 = easeOut
+			// Linear mode (0): easeIn=0, easeOut=0 — NO smoothing, straight lines
+			// Smooth mode (2): easeIn=3, easeOut=3 — Catmull-Rom spline smoothing
+			int easeIn = (this._interpolationMode == 0) ? 0 : 3;
+			int easeOut = (this._interpolationMode == 0) ? 0 : 3;
+			
+			Function.Call(unchecked((Hash)(-8788273988003890373L)), new InputArgument[]
+			{
+				this._mainCamera.Handle,
+				position.X,
+				position.Y,
+				position.Z,
+				rotation.X,
+				rotation.Y,
+				rotation.Z,
+				duration,
+				easeIn,    // 0 = no ease in (linear), 3 = smooth ease in
+				easeOut    // 0 = no ease out (linear), 3 = smooth ease out
+			});
+		}
+
+		public void ClearNodes()
+		{
+			this._nodes.Clear();
+			this._durations.Clear();
+			this._linearModeActive = false;
+			this._linearSegmentStartTime = 0;
+		}
+
+		// Token: 0x06000050 RID: 80 RVA: 0x00002E5C File Offset: 0x0000105C
+		public void EnterCameraView(Vector3 position)
+		{
+			// Start fade out, then activate camera after fade completes
+			this._fadeState = FadeState.FadingOut;
+			this._fadeStartTime = Game.GameTime;
+			Function.Call(unchecked((Hash)(-8567153562878803281L)), new InputArgument[] { 1200 });
+			this.MainCamera.Position = position;
+		}
+
+		// Token: 0x06000051 RID: 81 RVA: 0x00002EE8 File Offset: 0x000010E8
+		public void ExitCameraView()
+		{
+			// Stop linear playback if active
+			this._linearModeActive = false;
+			
+			// Start fade out, then deactivate camera after fade completes
+			this._fadeState = FadeState.FadingOutExit;
+			this._fadeStartTime = Game.GameTime;
+			Function.Call(unchecked((Hash)(-8567153562878803281L)), new InputArgument[] { 1200 });
+		}
+
+		// Fade state machine
+		private enum FadeState { None, FadingOut, Activating, FadingOutExit, Deactivating }
+		private FadeState _fadeState = FadeState.None;
+		private int _fadeStartTime = 0;
+
+		private void UpdateFade()
+		{
+			if (this._fadeState == FadeState.None) return;
+
+			int elapsed = Game.GameTime - this._fadeStartTime;
+
+			if (this._fadeState == FadeState.FadingOut)
+			{
+				if (elapsed >= 1200)
+				{
+					this.MainCamera.IsActive = true;
+					World.RenderingCamera = this.MainCamera;
+					this._fadeState = FadeState.Activating;
+					this._fadeStartTime = Game.GameTime;
+					Function.Call(unchecked((Hash)(-3104983138485256141L)), new InputArgument[] { 800 });
+				}
+			}
+			else if (this._fadeState == FadeState.Activating)
+			{
+				if (elapsed >= 800)
+				{
+					this._fadeState = FadeState.None;
+				}
+			}
+			else if (this._fadeState == FadeState.FadingOutExit)
+			{
+				if (elapsed >= 1200)
+				{
+					this.MainCamera.IsActive = false;
+					bool usePlayerView = this.UsePlayerView;
+					if (usePlayerView)
+					{
+						this.UsePlayerView = false;
+					}
+					World.RenderingCamera = null;
+					this._fadeState = FadeState.Deactivating;
+					this._fadeStartTime = Game.GameTime;
+					// Properly deactivate this specific camera
+					Function.Call((Hash)3582399230505917858L, new InputArgument[] { this._mainCamera.Handle, false });
+					Function.Call(unchecked((Hash)(-3104983138485256141L)), new InputArgument[] { 800 });
+				}
+			}
+			else if (this._fadeState == FadeState.Deactivating)
+			{
+				if (elapsed >= 800)
+				{
+					this._fadeState = FadeState.None;
+				}
+			}
+		}
+
+		// Token: 0x06000052 RID: 82 RVA: 0x00002F88 File Offset: 0x00001188
+		public void Update()
+		{
+			// Update fade state machine first
+			this.UpdateFade();
+			
+			bool isActive = this.MainCamera.IsActive;
+			if (isActive)
+			{
+				// In linear mode, handle movement manually
+				if (this._interpolationMode == 0)
+				{
+					this.UpdateLinear();
+				}
+				else
+				{
+					this.UpdateSpline();
+				}
+			}
+		}
+
+		private void UpdateSpline()
+		{
+			// Original spline-based camera movement
+			bool flag = this._renderSceneTimer.Enabled && Game.GameTime > this._renderSceneTimer.Waiter;
+			if (flag)
+			{
+				Function.Call((Hash)658611830838489950L, new InputArgument[]
+				{
+					this._mainCamera.Position.X,
+					this._mainCamera.Position.Y,
+					this._mainCamera.Position.Z
+				});
+				this._renderSceneTimer.Reset();
+			}
+			Function.Call((Hash)8187532053442985248L, new InputArgument[0]);
+			Function.Call((Hash)7495895348773880760L, new InputArgument[]
+			{
+				18
+			});
+			this._previousPos = this._mainCamera.Position;
+			bool flag2 = this._replayTimer.Enabled && Game.GameTime > this._replayTimer.Waiter;
+			if (flag2)
+			{
+				Function.Call((Hash)2606274068640751698L, new InputArgument[]
+				{
+					this._mainCamera.Handle,
+					0f
+				});
+				this._replayTimer.Enabled = false;
+			}
+			bool flag3 = !this._mainCamera.IsInterpolating;
+			if (flag3)
+			{
+				bool flag4 = Function.Call<float>(unchecked((Hash)(-5389508895980498790L)), new InputArgument[]
+				{
+					this._mainCamera.Handle
+				}) > 0.001f;
+				if (flag4)
+				{
+					bool interpToPlayer = this.InterpToPlayer;
+					if (interpToPlayer)
+					{
+						// Transition to player view
+						Function.Call((Hash)569060033405794044L, new InputArgument[]
+						{
+							0,
+							1,
+							3000,
+							1,
+							1,
+							1
+						});
+						// Properly deactivate this camera
+						Function.Call((Hash)3582399230505917858L, new InputArgument[] { this._mainCamera.Handle, false });
+						World.RenderingCamera = null;
+						this.MainCamera.IsActive = false;
+					}
+				}
+				bool flag5 = !this._replayTimer.Enabled;
+				if (flag5)
+				{
+					this._replayTimer.Start();
+				}
+			}
+			else
+			{
+				bool usePlayerView = this.UsePlayerView;
+				if (usePlayerView)
+				{
+					Game.Player.Character.Position = this.MainCamera.Position;
+				}
+				else
+				{
+					Vector3 vector = Vector3.Subtract(this._mainCamera.Position, this._previousPos);
+					Function.Call(unchecked((Hash)(-4939229729199161819L)), new InputArgument[]
+					{
+						this._mainCamera.Position.X,
+						this._mainCamera.Position.Y,
+						this._mainCamera.Position.Z,
+						vector.X,
+						vector.Y,
+						vector.Z
+					});
+				}
+			}
+		}
+
+		// Linear mode: let the spline engine handle linear movement
+		// With smoothing_style=0, easeIn=0, easeOut=0 — the spline moves in STRAIGHT lines
+		private int _linearSegmentStartTime = 0;
+		private bool _linearModeActive = false;
+
+		private void UpdateLinear()
+		{
+			// Start linear playback if not active
+			if (!this._linearModeActive)
+			{
+				this._linearModeActive = true;
+				this._linearSegmentStartTime = Game.GameTime;
+				
+				// Ensure smoothing is set to 0 for true linear movement
+				Function.Call((Hash)0xD1B0F412F109EA5D, new InputArgument[] { this._mainCamera.Handle, 0 });
+				
+				// Start the spline playback — it will move in straight lines between nodes
+				if (this._nodes.Count > 0)
+				{
+					// Reset spline to beginning (REPLAY_CAM_SPLINE = 0x247F0DD0F1758F62)
+					Function.Call((Hash)0x247F0DD0F1758F62, new InputArgument[] { this._mainCamera.Handle, 0f });
+					// Play the spline (PLAY_CAM_SPLINE = 0x55B1F2C29050C759)
+					Function.Call((Hash)0x55B1F2C29050C759, new InputArgument[] { this._mainCamera.Handle });
+				}
+			}
+
+			if (this._nodes.Count < 2) return;
+
+			// Let the spline engine handle the movement — just do the same bookkeeping as UpdateSpline
+			bool flag = this._renderSceneTimer.Enabled && Game.GameTime > this._renderSceneTimer.Waiter;
+			if (flag)
+			{
+				Function.Call((Hash)658611830838489950L, new InputArgument[]
+				{
+					this._mainCamera.Position.X,
+					this._mainCamera.Position.Y,
+					this._mainCamera.Position.Z
+				});
+				this._renderSceneTimer.Reset();
+			}
+			
+			// Check if spline is done and replay
+			bool flag3 = !this._mainCamera.IsInterpolating;
+			if (flag3)
+			{
+				bool flag4 = Function.Call<float>(unchecked((Hash)(-5389508895980498790L)), new InputArgument[]
+				{
+					this._mainCamera.Handle
+				}) > 0.001f;
+				if (flag4)
+				{
+					bool interpToPlayer = this.InterpToPlayer;
+					if (interpToPlayer)
+					{
+						Function.Call((Hash)569060033405794044L, new InputArgument[]
+						{
+							0,
+							1,
+							3000,
+							1,
+							1,
+							1
+						});
+						Function.Call((Hash)3582399230505917858L, new InputArgument[] { this._mainCamera.Handle, false });
+						World.RenderingCamera = null;
+						this.MainCamera.IsActive = false;
+					}
+					else
+					{
+						// Loop: replay spline from start
+						Function.Call((Hash)0x247F0DD0F1758F62, new InputArgument[] { this._mainCamera.Handle, 0f });
+						Function.Call((Hash)0x55B1F2C29050C759, new InputArgument[] { this._mainCamera.Handle });
+					}
+				}
+			}
+			else
+			{
+				bool usePlayerView = this.UsePlayerView;
+				if (usePlayerView)
+				{
+					Game.Player.Character.Position = this.MainCamera.Position;
+				}
+				else
+				{
+					Vector3 vector = Vector3.Subtract(this._mainCamera.Position, this._previousPos);
+					Function.Call(unchecked((Hash)(-4939229729199161819L)), new InputArgument[]
+					{
+						this._mainCamera.Position.X,
+						this._mainCamera.Position.Y,
+						this._mainCamera.Position.Z,
+						vector.X,
+						vector.Y,
+						vector.Z
+					});
+				}
+			}
+			
+			this._previousPos = this._mainCamera.Position;
+		}
+
+		private int _defaultDuration = 5000;
+		private List<int> _durations = new List<int>();
+
+		// Token: 0x04000014 RID: 20
+		private bool _usePlayerView;
+
+		// Token: 0x04000015 RID: 21
+		private Timer _renderSceneTimer;
+
+		// Token: 0x04000016 RID: 22
+		private Camera _mainCamera;
+
+		// Token: 0x04000017 RID: 23
+		private List<Tuple<Vector3, Vector3>> _nodes;
+
+		// Token: 0x04000018 RID: 24
+		private Timer _replayTimer;
+
+		// Token: 0x04000019 RID: 25
+		private Vector3 _startPos;
+		private bool _hasStartPosition = false;
+
+		// Token: 0x0400001A RID: 26
+		private Vector3 _previousPos;
+	}
+}

@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProjectGuid>{7B775C3F-0001-4A5E-B6F6-38BD9A5606C2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ModdedCamera</RootNamespace>
+    <AssemblyName>ModdedCamera</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <LangVersion>Default</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="LemonUI.SHVDN3">
+      <HintPath>LemonUI.SHVDN3.dll</HintPath>
+    </Reference>
+    <Reference Include="ScriptHookVDotNet">
+      <HintPath>ScriptHookVDotNet.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(USERPROFILE)\.nuget\packages\newtonsoft.json\13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Gamepad\AnalogStickChangedEventHandler.cs" />
+    <Compile Include="Gamepad\ButtonPressedEventHandler.cs" />
+    <Compile Include="Gamepad\GamepadHandler.cs" />
+    <Compile Include="Gamepad\TriggerChangedEventHandler.cs" />
+    <Compile Include="Input_Handlers\AnalogStickChangedEventArgs.cs" />
+    <Compile Include="Input_Handlers\ButtonPressedEventArgs.cs" />
+    <Compile Include="Input_Handlers\TriggerChangedEventArgs.cs" />
+    <Compile Include="CameraPath.cs" />
+    <Compile Include="CameraInterpolator.cs" />
+    <Compile Include="CameraRenderer.cs" />
+    <Compile Include="FadeStateMachine.cs" />
+    <Compile Include="InterpolationMode.cs" />
+    <Compile Include="Logger.cs" />
+    <Compile Include="NativeHashes.cs" />
+    <Compile Include="PathManager.cs" />
+    <Compile Include="Menu.cs" />
+    <Compile Include="PositionSelector.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SplineCamera.cs" />
+    <Compile Include="Timer.cs" />
+    <Compile Include="Utils.cs" />
+    <Compile Include="Vector3JsonConverter.cs" />
+    <Compile Include="Services\CameraService.cs" />
+    <Compile Include="Services\SaveService.cs" />
+    <Compile Include="Services\InputService.cs" />
+    <Compile Include="Services\MenuService.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
