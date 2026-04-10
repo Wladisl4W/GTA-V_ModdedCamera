@@ -1,0 +1,14 @@
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\ModdedCamera.dll
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\ModdedCamera.pdb
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\LemonUI.SHVDN3.dll
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\ScriptHookVDotNet.dll
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\LemonUI.SHVDN3.pdb
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\LemonUI.SHVDN3.xml
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\ScriptHookVDotNet.pdb
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\obj\x64\Debug\ModdedCamera.dll
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\obj\x64\Debug\ModdedCamera.pdb
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\obj\x64\Debug\ModdedCamera.csproj.AssemblyReference.cache
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\obj\x64\Debug\ModdedCamera.csproj.CoreCompileInputs.cache
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\obj\x64\Debug\ModdedCa.41C49AE6.Up2Date
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\Newtonsoft.Json.dll
+D:\work\GTA V\Mods\CameraModed\Source Code\ModdedCamera\bin\Debug\Newtonsoft.Json.xml
