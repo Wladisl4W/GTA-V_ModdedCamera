@@ -6,9 +6,9 @@ ScriptCamTool
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Требования:
-  • Script Hook V            — dev-c.com/gtav/scripthookv
-  • Script Hook V .NET 3     — github.com/scripthookvdotnet/scripthookvdotnet-nightly
-  • LemonUI.SHVDN3.dll       — gta5-mods.com/tools/lemonui
+  • Script Hook V            — https://dev-c.com/gtav/scripthookv/
+  • Script Hook V .NET 3     — https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases
+  • LemonUI.SHVDN3.dll       — https://gta5-mods.com/tools/lemonui
 
 Установка:
   1. Установите Script Hook V и Script Hook V .NET в корень GTA V
