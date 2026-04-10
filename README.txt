@@ -6,8 +6,8 @@ ScriptCamTool
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Требования:
-  • Script Hook V            — www.dev-c.com
-  • Script Hook V .NET 3     — www.gta5-mods.com/tools/script-hook-dot-net
+  • Script Hook V            — http://www.dev-c.com/gtav/scripthookv/
+  • Script Hook V .NET 3     — https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases
   • LemonUI.SHVDN3.dll       — www.gta5-mods.com/tools/lemonui
 
 Установка:
