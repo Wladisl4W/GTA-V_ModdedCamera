@@ -122,6 +122,7 @@ namespace ModdedCamera
 		private void LeftStickChanged(object sender, AnalogStickChangedEventArgs e)
 		{
 			// Frame-rate independent movement using Game.LastFrameTime
+			// INCREASED SENSITIVITY: 5x multiplier
 			float deltaTime = Game.LastFrameTime;
 			
 			bool flag = e.X > 127;
@@ -131,7 +132,7 @@ namespace ModdedCamera
 				{
 					2,
 					218
-				}) * -3f * deltaTime);
+				}) * -15f * deltaTime);  // -3f * 5 = -15f
 			}
 			bool flag2 = e.X < 127;
 			if (flag2)
@@ -140,7 +141,7 @@ namespace ModdedCamera
 				{
 					2,
 					218
-				}) * -3f * deltaTime);
+				}) * -15f * deltaTime);  // -3f * 5 = -15f
 			}
 			bool flag3 = e.Y != 127;
 			if (flag3)
@@ -149,7 +150,7 @@ namespace ModdedCamera
 				{
 					0,
 					8
-				}) * -5f * deltaTime);
+				}) * -25f * deltaTime);  // -5f * 5 = -25f
 			}
 			this._currentLerpTime += 0.02f;
 			bool flag4 = this._currentLerpTime > this.LerpTime;
@@ -165,6 +166,7 @@ namespace ModdedCamera
 		private void RightStickChanged(object sender, AnalogStickChangedEventArgs e)
 		{
 			// Frame-rate independent rotation using Game.LastFrameTime
+			// INCREASED SENSITIVITY: 5x multiplier
 			float deltaTime = Game.LastFrameTime;
 			
 			Camera mainCamera = this.MainCamera;
@@ -172,11 +174,11 @@ namespace ModdedCamera
 			{
 				2,
 				221
-			}) * -4f * deltaTime, 0f, Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]
+			}) * -20f * deltaTime, 0f, Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]  // -4f * 5 = -20f
 			{
 				2,
 				220
-			}) * -5f * deltaTime) * this.RotationSpeed;
+			}) * -25f * deltaTime) * this.RotationSpeed;  // -5f * 5 = -25f
 		}
 
 

@@ -66,8 +66,8 @@ namespace ModdedCamera
             _inputService.OnBackNavigation += OnBackNavigation;
             _inputService.OnAddNode += OnAddNode;
             _inputService.OnExitPointSelector += () => _cameraService.ExitPointSelector();
-            _inputService.OnScrollDurationUp += _menuService.IncreaseNodeDuration;
-            _inputService.OnScrollDurationDown += _menuService.DecreaseNodeDuration;
+            _inputService.OnScrollDurationUp += OnScrollDurationUp;
+            _inputService.OnScrollDurationDown += OnScrollDurationDown;
         }
 
         /// <summary>
@@ -155,6 +155,25 @@ namespace ModdedCamera
                 int duration = _menuService.GetNodeDuration();
                 UI.ShowSubtitle("Node added\nPos: (" + pos.X.ToString("F1") + ", " + pos.Y.ToString("F1") + ", " + pos.Z.ToString("F1") + ")\nDuration: " + duration + "ms");
             }
+        }
+
+        private void OnScrollDurationUp()
+        {
+            _menuService.IncreaseNodeDuration();
+            ShowDurationNotification();
+        }
+
+        private void OnScrollDurationDown()
+        {
+            _menuService.DecreaseNodeDuration();
+            ShowDurationNotification();
+        }
+
+        private void ShowDurationNotification()
+        {
+            int duration = _menuService.GetNodeDuration();
+            _cornerMessage = "Duration: " + duration + "ms";
+            _cornerShowTime = Game.GameTime;
         }
 
         // ===================== CORNER NOTIFICATIONS =====================
