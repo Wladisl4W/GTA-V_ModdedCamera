@@ -87,6 +87,9 @@ namespace ModdedCamera
         {
             try
             {
+                // Skip processing when player doesn't exist (during loading/cutscenes)
+                if (!Game.Player.Character.Exists()) return;
+
                 int gameTime = Game.GameTime;
 
                 // Draw corner notification for node duration
@@ -184,6 +187,7 @@ namespace ModdedCamera
                 Logger.Info("Disposing ModdedCamera...");
                 _cameraService?.Dispose();
                 _menuService?.Dispose();
+                Logger.Flush();
                 Logger.Info("ModdedCamera disposed successfully.");
             }
             catch (Exception ex)

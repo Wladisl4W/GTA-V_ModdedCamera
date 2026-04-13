@@ -296,12 +296,28 @@ namespace ModdedCamera.Services
             {
                 if (IsSplineCamActive || _splineCamWasUsed)
                 {
-                    SplineCamera?.Update();
+                    // Verify camera still exists before updating
+                    if (SplineCamera?.MainCamera?.Exists() == true)
+                    {
+                        SplineCamera?.Update();
+                    }
+                    else if (SplineCamera != null)
+                    {
+                        Logger.Warn("CameraService: SplineCamera main camera no longer exists");
+                    }
                 }
 
                 if (IsSelectorActive || _selectorWasUsed)
                 {
-                    PositionSelector?.Update();
+                    // Verify camera still exists before updating
+                    if (PositionSelector?.MainCamera?.Exists() == true)
+                    {
+                        PositionSelector?.Update();
+                    }
+                    else if (PositionSelector != null)
+                    {
+                        Logger.Warn("CameraService: PositionSelector main camera no longer exists");
+                    }
                 }
             }
             catch (Exception ex)
@@ -343,9 +359,9 @@ namespace ModdedCamera.Services
                     PositionSelector = null;
                 }
 
-                // Disable script camera rendering FIRST, then clear
-                Function.Call(NativeHashes.RENDER_SCRIPT_CAMS, false, 0, 0, false, false);
+                // Clear rendering camera FIRST, then disable script camera rendering
                 World.RenderingCamera = null;
+                Function.Call(NativeHashes.RENDER_SCRIPT_CAMS, false, 0, 0, false, false);
 
                 // Create fresh cameras
                 SplineCamera = new SplineCamera();
@@ -400,9 +416,9 @@ namespace ModdedCamera.Services
                     PositionSelector = null;
                 }
 
-                // Disable script camera rendering FIRST, then clear
-                Function.Call(NativeHashes.RENDER_SCRIPT_CAMS, false, 0, 0, false, false);
+                // Clear rendering camera FIRST, then disable script camera rendering
                 World.RenderingCamera = null;
+                Function.Call(NativeHashes.RENDER_SCRIPT_CAMS, false, 0, 0, false, false);
 
                 // Ensure player is unfrozen
                 Game.Player.Character.FreezePosition = false;

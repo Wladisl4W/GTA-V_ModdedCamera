@@ -40,6 +40,9 @@ namespace ModdedCamera
 			get { return this._mainCamera != null && this._mainCamera.Exists(); }
 		}
 
+		// Fade state machine - uses shared FadeStateMachine class
+		private FadeStateMachine _fadeMachine;
+
 
 		public PositionSelector(Vector3 position, Vector3 rotation)
 		{
@@ -56,6 +59,21 @@ namespace ModdedCamera
 			this._previousPos = position;
 			this._renderSceneTimer = new Timer(5000);
 			this._renderSceneTimer.Start();
+
+			// Initialize fade state machine
+			this._fadeMachine = new FadeStateMachine(
+				onActivate: () => {
+					this.MainCamera.IsActive = true;
+					World.RenderingCamera = this.MainCamera;
+					Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
+				},
+				onDeactivate: () => {
+					this.MainCamera.IsActive = false;
+					World.RenderingCamera = null;
+					Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
+				},
+				logPrefix: "PositionSelector"
+			);
 		}
 
 		// Properly dispose of all resources to prevent leaks
@@ -103,6 +121,9 @@ namespace ModdedCamera
 
 		private void LeftStickChanged(object sender, AnalogStickChangedEventArgs e)
 		{
+			// Frame-rate independent movement using Game.LastFrameTime
+			float deltaTime = Game.LastFrameTime;
+			
 			bool flag = e.X > 127;
 			if (flag)
 			{
@@ -110,7 +131,7 @@ namespace ModdedCamera
 				{
 					2,
 					218
-				}) * -3f);
+				}) * -3f * deltaTime);
 			}
 			bool flag2 = e.X < 127;
 			if (flag2)
@@ -119,7 +140,7 @@ namespace ModdedCamera
 				{
 					2,
 					218
-				}) * -3f);
+				}) * -3f * deltaTime);
 			}
 			bool flag3 = e.Y != 127;
 			if (flag3)
@@ -128,7 +149,7 @@ namespace ModdedCamera
 				{
 					0,
 					8
-				}) * -5f);
+				}) * -5f * deltaTime);
 			}
 			this._currentLerpTime += 0.02f;
 			bool flag4 = this._currentLerpTime > this.LerpTime;
@@ -143,16 +164,19 @@ namespace ModdedCamera
 
 		private void RightStickChanged(object sender, AnalogStickChangedEventArgs e)
 		{
+			// Frame-rate independent rotation using Game.LastFrameTime
+			float deltaTime = Game.LastFrameTime;
+			
 			Camera mainCamera = this.MainCamera;
 			mainCamera.Rotation += new Vector3(Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]
 			{
 				2,
 				221
-			}) * -4f, 0f, Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]
+			}) * -4f * deltaTime, 0f, Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]
 			{
 				2,
 				220
-			}) * -5f) * this.RotationSpeed;
+			}) * -5f * deltaTime) * this.RotationSpeed;
 		}
 
 
@@ -168,10 +192,8 @@ namespace ModdedCamera
 
 		public void EnterCameraView(Vector3 position)
 		{
-			// Start fade out, then activate camera after fade completes
-			this._fadeState = FadeState.FadingOut;
-			Function.Call(Hash.DO_SCREEN_FADE_OUT, new InputArgument[] { 1200 });
 			this.MainCamera.Position = position;
+			this._fadeMachine.StartFadeOut(1200);
 
 			// Disable controls once at entry instead of every frame
 			this.DisablePlayerControls();
@@ -179,9 +201,7 @@ namespace ModdedCamera
 
 		public void ExitCameraView()
 		{
-			// Start fade out, then deactivate camera after fade completes
-			this._fadeState = FadeState.FadingOutExit;
-			Function.Call(Hash.DO_SCREEN_FADE_OUT, new InputArgument[] { 1200 });
+			this._fadeMachine.StartFadeOutExit(1200);
 
 			// Re-enable controls at exit
 			this.EnablePlayerControls();
@@ -206,89 +226,13 @@ namespace ModdedCamera
 			}
 		}
 
-		// Fade state machine — uses HAS_SCREEN_FADED_* instead of hardcoded timers
-		private enum FadeState { None, FadingOut, Activating, FadingOutExit, Deactivating }
-		private FadeState _fadeState = FadeState.None;
-
-		private void UpdateFade()
-		{
-			try
-			{
-				if (this._fadeState == FadeState.None) return;
-
-				if (this._mainCamera == null || !this._mainCamera.Exists())
-				{
-					Logger.Warn("UpdateFade (PositionSelector): Camera not available");
-					this._fadeState = FadeState.None;
-					return;
-				}
-
-				if (this._fadeState == FadeState.FadingOut)
-				{
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT))
-					{
-						try
-						{
-							this.MainCamera.IsActive = true;
-							World.RenderingCamera = this.MainCamera;
-							this._fadeState = FadeState.Activating;
-							Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
-						}
-						catch (Exception ex)
-						{
-							Logger.Error(ex, "UpdateFade: Error activating position selector camera");
-							this._fadeState = FadeState.None;
-						}
-					}
-				}
-				else if (this._fadeState == FadeState.Activating)
-				{
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_IN))
-					{
-						this._fadeState = FadeState.None;
-					}
-				}
-				else if (this._fadeState == FadeState.FadingOutExit)
-				{
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT))
-					{
-						try
-						{
-							this.MainCamera.IsActive = false;
-							World.RenderingCamera = null;
-							this._fadeState = FadeState.Deactivating;
-							Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
-						}
-						catch (Exception ex)
-						{
-							Logger.Error(ex, "UpdateFade: Error deactivating position selector camera");
-							this._fadeState = FadeState.None;
-						}
-					}
-				}
-				else if (this._fadeState == FadeState.Deactivating)
-				{
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_IN))
-					{
-						this._fadeState = FadeState.None;
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Logger.Error(ex, "UpdateFade (PositionSelector): Unexpected error");
-				this._fadeState = FadeState.None;
-			}
-		}
-
-
 		public void Update()
 		{
 			try
 			{
 				// Update fade state machine first
-				this.UpdateFade();
-				
+				this._fadeMachine.Update();
+
 				if (this._mainCamera == null || !this._mainCamera.Exists())
 				{
 					Logger.Warn("PositionSelector.Update: Camera not available");
@@ -301,67 +245,16 @@ namespace ModdedCamera
 					bool shouldRender = this._renderSceneTimer.Enabled && this._renderSceneTimer.Check();
 					if (shouldRender)
 					{
-						try
-						{
-							// SET_FOCUS_AREA native
-							Function.Call((Hash)658611830838489950L, new InputArgument[]
-							{
-								this._mainCamera.Position.X,
-								this._mainCamera.Position.Y,
-								this._mainCamera.Position.Z
-							});
-							this._renderSceneTimer.Reset();
-						}
-						catch (Exception ex)
-						{
-							Logger.Debug("SET_FOCUS_AREA native warning: " + ex.Message);
-						}
-					}
-
-					// Controls are now disabled once at EnterCameraView and re-enabled at ExitCameraView
-					// No need to call DISABLE_CONTROL_ACTION every frame
-
-					// Rendering functions
-					try
-					{
-						Function.Call((Hash)8187532053442985248L, new InputArgument[0]);
-					}
-					catch (Exception ex)
-					{
-						Logger.Debug("Rendering native #1 warning: " + ex.Message);
-					}
-
-					try
-					{
-						Function.Call((Hash)7495895348773880760L, new InputArgument[] { 18 });
-					}
-					catch (Exception ex)
-					{
-						Logger.Debug("Rendering native #2 warning: " + ex.Message);
-					}
-
-					// Draw position marker
-					try
-					{
-						Vector3 vector = Vector3.Subtract(this._mainCamera.Position, this._previousPos);
-						Function.Call(unchecked((Hash)(-4939229729199161819L)), new InputArgument[]
-						{
-							this._mainCamera.Position.X,
-							this._mainCamera.Position.Y,
-							this._mainCamera.Position.Z,
-							vector.X,
-							vector.Y,
-							vector.Z
-						});
-					}
-					catch (Exception ex)
-					{
-						Logger.Debug("Draw marker warning: " + ex.Message);
+						// Use CameraRenderer utilities
+						CameraRenderer.UpdateFocusArea(this._mainCamera.Position);
+						CameraRenderer.DrawRenderScene();
+						CameraRenderer.DrawPositionMarker(this._mainCamera.Position, this._previousPos);
+						this._renderSceneTimer.Reset();
 					}
 
 					this._previousPos = this._mainCamera.Position;
 					this.RenderEntityPosition();
-					
+
 					try
 					{
 						this.GamepadHandler.Update();

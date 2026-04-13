@@ -12,6 +12,8 @@ namespace ModdedCamera
 		// Internal interpolation engine - uses client-side math instead of natives
 		private CameraInterpolator _interpolator;
 
+		// Fade state machine - uses shared FadeStateMachine class
+		private FadeStateMachine _fadeMachine;
 
 		// (get) Token: 0x06000047 RID: 71 RVA: 0x00002BE8 File Offset: 0x00000DE8
 		public Camera MainCamera
@@ -205,6 +207,44 @@ namespace ModdedCamera
 				this._nodes = new List<Tuple<Vector3, Vector3>>();
 				this._renderSceneTimer = new Timer(5000);
 				this._renderSceneTimer.Start();
+
+				// Initialize fade state machine
+				this._fadeMachine = new FadeStateMachine(
+					onActivate: () => {
+						this.MainCamera.IsActive = true;
+						World.RenderingCamera = this.MainCamera;
+						Function.Call(Hash.RENDER_SCRIPT_CAMS, true, 0, 0, false, false);
+
+						// Start interpolator playback
+						if (this._interpolator != null)
+						{
+							this._interpolator.Start();
+							Logger.Info("Interpolator playback STARTED");
+						}
+
+						Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
+					},
+					onDeactivate: () => {
+						if (this.UsePlayerView)
+						{
+							this.UsePlayerView = false;
+						}
+
+						// Stop interpolator
+						if (this._interpolator != null)
+						{
+							this._interpolator.Stop();
+							Logger.Info("Interpolator playback STOPPED");
+						}
+
+						this.MainCamera.IsActive = false;
+						World.RenderingCamera = null;
+						Function.Call(Hash.RENDER_SCRIPT_CAMS, false, 0, 0, false, false);
+
+						Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
+					},
+					logPrefix: "SplineCamera"
+				);
 			}
 			catch (Exception ex)
 			{
@@ -401,11 +441,8 @@ namespace ModdedCamera
 
 		public void EnterCameraView(Vector3 position)
 		{
-			// Start fade out, then activate camera after fade completes
-			this._fadeState = FadeState.FadingOut;
-			Function.Call(Hash.DO_SCREEN_FADE_OUT, new InputArgument[] { 1200 });
 			this.MainCamera.Position = position;
-			
+
 			// Prepare interpolator for playback
 			if (this._nodes.Count >= 2)
 			{
@@ -415,7 +452,7 @@ namespace ModdedCamera
 					var rotations = this.GetRotations();
 					var durations = this.GetDurations();
 					this._interpolator.SetPath(positions, rotations, durations);
-					
+
 					// Pass the current interpolation mode to the interpolator
 					this._interpolator.InterpolationMode = this._interpolationMode;
 
@@ -428,128 +465,22 @@ namespace ModdedCamera
 					Logger.Error(ex, "Error setting interpolator path");
 				}
 			}
+
+			// Start fade out
+			this._fadeMachine.StartFadeOut(1200);
 		}
 
 
 		public void ExitCameraView()
 		{
-			// Start fade out, then deactivate camera after fade completes
-			this._fadeState = FadeState.FadingOutExit;
-			Function.Call(Hash.DO_SCREEN_FADE_OUT, new InputArgument[] { 1200 });
+			// Start fade out exit
+			this._fadeMachine.StartFadeOutExit(1200);
 		}
-
-		// Fade state machine — uses HAS_SCREEN_FADED_* instead of hardcoded timers
-		private enum FadeState { None, FadingOut, Activating, FadingOutExit, Deactivating }
-		private FadeState _fadeState = FadeState.None;
-
-		private void UpdateFade()
-		{
-			try
-			{
-				if (this._fadeState == FadeState.None) return;
-
-				if (this._mainCamera == null || !this._mainCamera.Exists())
-				{
-					Logger.Warn("UpdateFade: Camera not available, resetting fade state");
-					this._fadeState = FadeState.None;
-					return;
-				}
-
-				if (this._fadeState == FadeState.FadingOut)
-				{
-					// Wait for fade out to complete
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT))
-					{
-						try
-						{
-							// Activate camera and start fade in
-							this.MainCamera.IsActive = true;
-							World.RenderingCamera = this.MainCamera;
-							Function.Call(Hash.RENDER_SCRIPT_CAMS, true, 0, 0, false, false);
-
-							// Start interpolator playback
-							if (this._interpolator != null)
-							{
-								this._interpolator.Start();
-								Logger.Info("Interpolator playback STARTED");
-							}
-
-							// Note: PLAY_CAM_SPLINE is not needed - IsActive = true starts the playback automatically
-							// in SHVDN3. Removed to prevent "Can't find native" errors on some versions.
-
-							this._fadeState = FadeState.Activating;
-							Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
-						}
-						catch (Exception ex)
-						{
-							Logger.Error(ex, "UpdateFade: Error activating camera");
-							this._fadeState = FadeState.None;
-						}
-					}
-				}
-				else if (this._fadeState == FadeState.Activating)
-				{
-					// Wait for fade in to complete
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_IN))
-					{
-						this._fadeState = FadeState.None;
-					}
-				}
-				else if (this._fadeState == FadeState.FadingOutExit)
-				{
-					// Wait for fade out to complete
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT))
-					{
-						try
-						{
-							// Deactivate camera
-							if (this.UsePlayerView)
-							{
-								this.UsePlayerView = false;
-							}
-							
-							// Stop interpolator
-							if (this._interpolator != null)
-							{
-								this._interpolator.Stop();
-								Logger.Info("Interpolator playback STOPPED");
-							}
-							
-							this.MainCamera.IsActive = false;
-							World.RenderingCamera = null;
-							Function.Call(Hash.RENDER_SCRIPT_CAMS, false, 0, 0, false, false);
-
-							this._fadeState = FadeState.Deactivating;
-							Function.Call(Hash.DO_SCREEN_FADE_IN, new InputArgument[] { 800 });
-						}
-						catch (Exception ex)
-						{
-							Logger.Error(ex, "UpdateFade: Error deactivating camera");
-							this._fadeState = FadeState.None;
-						}
-					}
-				}
-				else if (this._fadeState == FadeState.Deactivating)
-				{
-					// Wait for fade in to complete
-					if (Function.Call<bool>(Hash.IS_SCREEN_FADED_IN))
-					{
-						this._fadeState = FadeState.None;
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Logger.Error(ex, "UpdateFade: Unexpected error");
-				this._fadeState = FadeState.None;
-			}
-		}
-
 
 		public void Update()
 		{
 			// Update fade state machine first
-			this.UpdateFade();
+			this._fadeMachine.Update();
 
 			bool isActive = this.MainCamera.IsActive;
 			if (isActive)
@@ -614,41 +545,10 @@ namespace ModdedCamera
 				bool shouldRender = this._renderSceneTimer.Enabled && this._renderSceneTimer.Check();
 				if (shouldRender)
 				{
-					// SET_FOCUS_AREA
-					try
-					{
-						Function.Call((Hash)658611830838489950L, new InputArgument[]
-						{
-							this._mainCamera.Position.X,
-							this._mainCamera.Position.Y,
-							this._mainCamera.Position.Z
-						});
-					}
-					catch (Exception ex)
-					{
-						Logger.Debug("SET_FOCUS_AREA warning: " + ex.Message);
-					}
+					// Use CameraRenderer utilities instead of direct native calls
+					CameraRenderer.UpdateFocusArea(this._mainCamera.Position);
+					CameraRenderer.DrawRenderScene();
 					this._renderSceneTimer.Reset();
-				}
-
-				// USE_FADING_FRONT_END_SCALEFORM or similar rendering native
-				try
-				{
-					Function.Call((Hash)8187532053442985248L, new InputArgument[0]);
-				}
-				catch (Exception ex)
-				{
-					Logger.Debug("RenderScene native #1 warning: " + ex.Message);
-				}
-
-				// Additional rendering sync
-				try
-				{
-					Function.Call((Hash)7495895348773880760L, new InputArgument[] { 18 });
-				}
-				catch (Exception ex)
-				{
-					Logger.Debug("RenderScene native #2 warning: " + ex.Message);
 				}
 			}
 			catch (Exception ex)
