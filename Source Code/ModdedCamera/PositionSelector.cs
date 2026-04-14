@@ -122,9 +122,9 @@ namespace ModdedCamera
 		private void LeftStickChanged(object sender, AnalogStickChangedEventArgs e)
 		{
 			// Frame-rate independent movement using Game.LastFrameTime
-			// INCREASED SENSITIVITY: 5x multiplier
+			// SENSITIVITY: 25x multiplier for WASD movement (100x / 4 = 25x)
 			float deltaTime = Game.LastFrameTime;
-			
+
 			bool flag = e.X > 127;
 			if (flag)
 			{
@@ -132,7 +132,7 @@ namespace ModdedCamera
 				{
 					2,
 					218
-				}) * -15f * deltaTime);  // -3f * 5 = -15f
+				}) * -75f * deltaTime);  // -3f * 25 = -75f
 			}
 			bool flag2 = e.X < 127;
 			if (flag2)
@@ -141,7 +141,7 @@ namespace ModdedCamera
 				{
 					2,
 					218
-				}) * -15f * deltaTime);  // -3f * 5 = -15f
+				}) * -75f * deltaTime);  // -3f * 25 = -75f
 			}
 			bool flag3 = e.Y != 127;
 			if (flag3)
@@ -150,7 +150,7 @@ namespace ModdedCamera
 				{
 					0,
 					8
-				}) * -25f * deltaTime);  // -5f * 5 = -25f
+				}) * -125f * deltaTime);  // -5f * 25 = -125f
 			}
 			this._currentLerpTime += 0.02f;
 			bool flag4 = this._currentLerpTime > this.LerpTime;
@@ -166,19 +166,19 @@ namespace ModdedCamera
 		private void RightStickChanged(object sender, AnalogStickChangedEventArgs e)
 		{
 			// Frame-rate independent rotation using Game.LastFrameTime
-			// INCREASED SENSITIVITY: 5x multiplier
+			// INCREASED SENSITIVITY: 100x multiplier (keyboard/mouse optimized)
 			float deltaTime = Game.LastFrameTime;
-			
+
 			Camera mainCamera = this.MainCamera;
 			mainCamera.Rotation += new Vector3(Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]
 			{
 				2,
 				221
-			}) * -20f * deltaTime, 0f, Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]  // -4f * 5 = -20f
+			}) * -400f * deltaTime, 0f, Function.Call<float>(unchecked((Hash)(-1424092350868114077L)), new InputArgument[]  // -4f * 100 = -400f
 			{
 				2,
 				220
-			}) * -25f * deltaTime) * this.RotationSpeed;  // -5f * 5 = -25f
+			}) * -500f * deltaTime) * this.RotationSpeed;  // -5f * 100 = -500f
 		}
 
 

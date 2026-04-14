@@ -93,9 +93,8 @@ namespace ModdedCamera.Services
         /// </summary>
         public void DisableInterferingControls()
         {
-            // Disable Back/Escape controls to prevent LemonUI from processing them
+            // Disable Pause controls to prevent game from pausing
             Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 199, true);  // FrontendPause
-            Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 177, true);  // PhoneCancel (Escape)
             Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 200, true);  // FrontendPauseAlt
         }
     }
