@@ -33,26 +33,15 @@ namespace ModdedCamera
 
         /// <summary>
         /// Draw render scene natives (camera shake and lighting).
+        /// NOTE: Disabled because the native calls had incorrect signatures
+        /// (SET_CAM_SHAKE with no args, DRAW_LIGHT_WITH_RANGE with just 18)
+        /// and caused performance issues / garbage rendering.
+        /// SET_FOCUS_AREA (called in UpdateFocusArea) is sufficient for proper scene rendering.
         /// </summary>
         public static void DrawRenderScene()
         {
-            try
-            {
-                Function.Call(NativeHashes.SET_CAM_SHAKE, new InputArgument[0]);
-            }
-            catch (Exception ex)
-            {
-                Logger.Debug("RenderScene native #1 (SET_CAM_SHAKE) warning: " + ex.Message);
-            }
-
-            try
-            {
-                Function.Call(NativeHashes.DRAW_LIGHT_WITH_RANGE, new InputArgument[] { 18 });
-            }
-            catch (Exception ex)
-            {
-                Logger.Debug("RenderScene native #2 (DRAW_LIGHT_WITH_RANGE) warning: " + ex.Message);
-            }
+            // Intentionally empty - broken native calls removed.
+            // Focus area update handles rendering.
         }
 
         /// <summary>

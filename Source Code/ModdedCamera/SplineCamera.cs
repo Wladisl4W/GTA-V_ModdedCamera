@@ -285,6 +285,17 @@ namespace ModdedCamera
 		{
 			try
 			{
+				// Stop timers and interpolator first to avoid background work after unload
+				if (this._renderSceneTimer != null)
+				{
+					try { this._renderSceneTimer.Stop(); } catch { }
+					this._renderSceneTimer = null;
+				}
+				if (this._interpolator != null)
+				{
+					try { this._interpolator.Stop(); } catch { }
+				}
+				
 				if (this._mainCamera != null && this._mainCamera.Exists())
 				{
 					if (this._mainCamera.IsActive)
@@ -295,6 +306,8 @@ namespace ModdedCamera
 					Function.Call(Hash.DESTROY_CAM, new InputArgument[] { this._mainCamera.Handle });
 					this._mainCamera = null;
 				}
+				// Clear nodes to free memory
+				if (this._nodes != null) this._nodes.Clear();
 			}
 			catch (Exception ex)
 			{
@@ -513,14 +526,10 @@ namespace ModdedCamera
 				Vector3 interpRot;
 				this._interpolator.Update(out interpPos, out interpRot);
 
-				// ALWAYS apply position and rotation from interpolator
-				// This is the ONLY system moving the camera
-				if (interpPos != Vector3.Zero || interpRot != Vector3.Zero)
-				{
-					this._mainCamera.Position = interpPos;
-					this._mainCamera.Rotation = interpRot;
-					this._previousPos = this._mainCamera.Position;
-				}
+				// Always apply position and rotation from interpolator
+				this._mainCamera.Position = interpPos;
+				this._mainCamera.Rotation = interpRot;
+				this._previousPos = this._mainCamera.Position;
 
 				// Update rendering
 				this.UpdateRenderScene();

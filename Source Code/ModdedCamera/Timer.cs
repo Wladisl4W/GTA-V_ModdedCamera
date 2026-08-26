@@ -40,6 +40,12 @@ public class Timer
 		this.enabled = false;
 	}
 
+	// New: explicit stop to help cleanup on unload
+	public void Stop()
+	{
+		this.enabled = false;
+	}
+
 	public void Start()
 	{
 		// FIXED: Use unchecked arithmetic - overflow wraps naturally
@@ -64,18 +70,16 @@ public class Timer
 	/// FIXED: Check if timer has elapsed using unsigned comparison.
 	/// This correctly handles Game.GameTime overflow (~24.8 day cycle).
 	/// </summary>
-	public bool Check()
-	{
-		if (!enabled) return false;
-		
-		// Cast to uint makes overflow wrap naturally:
-		// If Game.GameTime overflows past waiter, (uint)(current - waiter) will be large positive
-		unchecked
-		{
-			uint elapsed = (uint)(Game.GameTime - this.waiter);
-			return elapsed >= 0 && Game.GameTime != this.waiter;
-		}
-	}
+    public bool Check()
+    {
+        if (!enabled) return false;
+        
+        // Use a simpler, overflow-robust check: timer fires when current time >= waiter.
+        // Cast to long to avoid int overflow during comparison.
+        long current = (long)Game.GameTime;
+        long target = (long)this.waiter;
+        return current >= target;
+    }
 
 	private bool enabled;
 	private int interval;

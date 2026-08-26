@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using GTA;
 using GTA.Math;
 
 namespace ModdedCamera
@@ -18,10 +18,9 @@ namespace ModdedCamera
 		private bool _isPlaying = false;
 		private int _interpolationMode = 2; // 0 = Linear, 2 = Smooth (Catmull-Rom)
 
-		// FIXED: Changed from static to instance-level to prevent race conditions
-		// when multiple interpolators are created or during mod hot-reload
-		private readonly Stopwatch _stopwatch = new Stopwatch();
-		private double _playbackStartTimeMs = 0; // milliseconds with decimal precision
+		// Track playback time using Game.GameTime (game-synchronized, not wall-clock)
+		// This ensures camera movement stays smooth even when game FPS drops.
+		private int _playbackStartTimeMs = 0;
 
 		// Cache total path duration
 		private int _totalDurationMs = 0;
@@ -38,7 +37,7 @@ namespace ModdedCamera
 		// Public method to adjust playback timing for dynamic speed changes
 		public void SetPlaybackOffset(int elapsedMs)
 		{
-			_playbackStartTimeMs = _stopwatch.ElapsedMilliseconds - elapsedMs;
+			_playbackStartTimeMs = Game.GameTime - elapsedMs;
 		}
 
 		public CameraInterpolator()
@@ -46,9 +45,6 @@ namespace ModdedCamera
 			_positions = new List<Vector3>();
 			_rotations = new List<Vector3>();
 			_durations = new List<int>();
-
-			// Start stopwatch for this instance
-			_stopwatch.Start();
 		}
 
 		public void SetPath(List<Vector3> positions, List<Vector3> rotations, List<int> durations)
@@ -95,7 +91,7 @@ namespace ModdedCamera
 				}
 
 				_isPlaying = true;
-				_playbackStartTimeMs = _stopwatch.Elapsed.TotalMilliseconds;
+				_playbackStartTimeMs = Game.GameTime;
 				PlaybackProgress = 0f;
 
 				Logger.Info("Playback started - total duration: " + _totalDurationMs + "ms, instant looping enabled (high-precision timing)");
@@ -123,14 +119,16 @@ namespace ModdedCamera
 
 			try
 			{
-				// Calculate elapsed time using high-precision stopwatch
-				double elapsedMs = _stopwatch.Elapsed.TotalMilliseconds - _playbackStartTimeMs;
+				// Calculate elapsed time using game-synchronized Game.GameTime
+				// This keeps camera movement smooth when game FPS drops (camera moves at game time, not wall time)
+				long now = Game.GameTime;
+				long elapsedMs = now - (long)_playbackStartTimeMs;
 
-				// Handle negative elapsed (shouldn't happen with Stopwatch, but safety check)
+				// Handle Game.GameTime overflow (~24.8 day cycle)
 				if (elapsedMs < 0)
 				{
 					Logger.Warn("Timing overflow detected, resetting playback");
-					_playbackStartTimeMs = _stopwatch.Elapsed.TotalMilliseconds;
+					_playbackStartTimeMs = Game.GameTime;
 					elapsedMs = 0;
 				}
 

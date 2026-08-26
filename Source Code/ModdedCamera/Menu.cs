@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using GTA;
 using GTA.Math;
+using GTA.Native;
 using ModdedCamera.Services;
 
 namespace ModdedCamera
@@ -21,6 +22,12 @@ namespace ModdedCamera
         private SaveService _saveService;
         private InputService _inputService;
         private MenuService _menuService;
+
+        // Idle optimization: stop processing when mod is idle
+        private const bool IDLE_OPTIMIZATION_ENABLED = false;
+        private int _idleAccumMs = 0;
+        private int _lastTickTime = 0;
+        private const int IDLE_CLEANUP_MS = 3000;
 
         public Menu()
         {
@@ -47,6 +54,10 @@ namespace ModdedCamera
                 Tick += OnTick;
                 KeyUp += OnKeyUp;
                 KeyDown += OnKeyDown;
+
+                // Initialize idle cleanup state
+                _idleAccumMs = 0;
+                _lastTickTime = Game.GameTime;
 
                 Logger.Info("=== ModdedCamera Mod Started Successfully ===");
             }
@@ -112,8 +123,12 @@ namespace ModdedCamera
                     _inputService.ProcessPointSelectorInput();
                 }
 
-                // Disable interfering controls
-                _inputService.DisableInterferingControls();
+                // Disable interfering controls only when mod is active (camera or menu)
+                bool modActive = _cameraService.IsAnyCameraActive || menusVisible;
+                if (modActive)
+                {
+                    _inputService.DisableInterferingControls();
+                }
 
                 // Process menus
                 _menuService.Process();
